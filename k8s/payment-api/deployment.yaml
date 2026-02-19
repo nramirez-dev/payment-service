@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-api:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+
+            - name: ConnectionStrings__PaymentDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: payment-api-secrets
+                  key: payment-database-connection
+
+            - name: Stripe__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: payment-api-secrets
+                  key: stripe-secret-key
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
